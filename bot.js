@@ -764,6 +764,12 @@ app.get('/api/accounts', (req, res) => {
             }
         }
 
+        res.json(results);
+    });
+});
+
+// API: Connect account
+app.post('/api/connect', (req, res) => {
     const { name, phone, settings } = req.body;
     if (!name || !phone) return res.status(400).json({ error: 'Name and Phone are required' });
 
