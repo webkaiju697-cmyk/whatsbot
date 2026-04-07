@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Commercial Bot Hub | Multi-Session Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
             --bg: #020617;
@@ -329,6 +330,13 @@
                 </div>
                 <button class="btn" style="background: rgba(255,255,255,0.05); margin-top: 1.5rem;" onclick="closeModal()">Back to Dashboard</button>
             </div>
+            <div id="modalSuccess" style="display: none; text-align: center;">
+                <div class="success-icon">
+                    <svg width="48" height="48" fill="none" stroke="var(--success)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h3>Successfully Connected!</h3>
+                <p>Your WhatsApp account is now active and ready to use.</p>
+            </div>
         </div>
     </div>
 
@@ -444,6 +452,29 @@
 
     <script>
         let currentPollingPhone = null;
+        const socket = io();
+
+        socket.on('accountUpdate', (data) => {
+            // Update pairing panel if it's for the current phone
+            if (data.phone === currentPollingPhone) {
+                showPairingResult(data.pairingCode, data.qr);
+            }
+            // Update the account list status
+            fetchState(); // Refresh the list
+        });
+
+        socket.on('accountConnected', (data) => {
+            if (data.phone === currentPollingPhone) {
+                // Show success message and close modal
+                document.getElementById('modalLoading').style.display = 'none';
+                document.getElementById('modalResult').style.display = 'none';
+                document.getElementById('modalSuccess').style.display = 'block';
+                setTimeout(() => {
+                    closeModal();
+                }, 2000);
+            }
+            fetchState(); // Refresh to show connected status
+        });
 
         async function fetchState() {
             try {

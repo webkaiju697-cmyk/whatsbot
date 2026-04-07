@@ -5,6 +5,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { Server } = require('socket.io');
 const app = express();
 const port = 3000;
 
@@ -97,6 +98,17 @@ class BotSession {
         };
     }
 
+    emitUpdate() {
+        if (io) {
+            io.emit('accountUpdate', {
+                phone: this.phone,
+                status: this.status,
+                pairingCode: this.pairingCode,
+                qr: this.qr
+            });
+        }
+    }
+
     async init() {
         console.log(`[${this.phone}] Initializing session for ${this.name}...`);
         
@@ -140,16 +152,20 @@ class BotSession {
                 onQRCode: (base64) => {
                     this.qr = base64;
                     this.status = 'Waiting for QR Scan';
+                    this.emitUpdate();
                 },
                 statusFind: (status) => {
                     this.status = status;
                     this.updateDbStatus(status);
+                    this.emitUpdate();
                 }
             });
 
             this.status = 'Connected';
             this.qr = '';
             this.updateDbStatus('Connected');
+            this.emitUpdate();
+            if (io) io.emit('accountConnected', { phone: this.phone });
             this.startBot();
         } catch (error) {
             console.error(`[${this.phone}] Failed to init:`, error);
@@ -204,6 +220,7 @@ class BotSession {
                     this.qr = base64;
                     this.status = 'Waiting for QR Scan';
                     this.updateDbStatus('Waiting for QR Scan');
+                    this.emitUpdate();
                     console.log(`[${this.phone}] QR code received for pairing.`);
                 },
                 catchLinkCode: (code) => {
@@ -211,6 +228,7 @@ class BotSession {
                     this.pairingCode = code;
                     this.status = 'Waiting for Pairing Code';
                     this.updateDbStatus('Waiting for Pairing Code');
+                    this.emitUpdate();
                     console.log(`[${this.phone}] Pairing Code generated (via catchLinkCode): ${code}`);
                 },
                 onReady: () => {
@@ -223,9 +241,12 @@ class BotSession {
                 statusFind: async (status) => {
                     this.status = status;
                     this.updateDbStatus(status);
+                    this.emitUpdate();
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
                         this.qr = '';
+                        this.emitUpdate();
+                        if (io) io.emit('accountConnected', { phone: this.phone });
                         if (this._pairingRetryTimer) {
                             clearTimeout(this._pairingRetryTimer);
                             this._pairingRetryTimer = null;
@@ -891,6 +912,8 @@ const server = app.listen(port, () => {
     console.log(`🚀 Commercial Bot Dashboard running at http://localhost:${port}/`);
     initAllSessions();
 });
+
+const io = new Server(server);
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
