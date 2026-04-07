@@ -10,8 +10,9 @@ const app = express();
 const port = 3000;
 
 // Centralized Data Directory for Persistence
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || process.env.DATA_PATH || process.env.DATA_VOLUME || path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+console.log(`🚀 DATA_DIR initialized at: ${DATA_DIR}`);
 
 // Multer Setup for worker node assets
 const storage = multer.diskStorage({
@@ -25,7 +26,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Database Setup
-const db = new sqlite3.Database(path.join(DATA_DIR, 'bot_data.db'));
+const dbPath = path.join(DATA_DIR, 'bot_data.db');
+console.log(`🚀 SQLite DB path: ${dbPath}`);
+const db = new sqlite3.Database(dbPath);
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS whatsapp_accounts (
         phone TEXT PRIMARY KEY,
@@ -37,7 +40,11 @@ db.serialize(() => {
         settings TEXT DEFAULT '{}'
     )`);
     // Migrate existing tables that don't have the settings column yet
-    db.run(`ALTER TABLE whatsapp_accounts ADD COLUMN settings TEXT DEFAULT '{}'`, () => {});
+    db.run(`ALTER TABLE whatsapp_accounts ADD COLUMN settings TEXT DEFAULT '{}'`, (err) => {
+        if (err && !/duplicate column/i.test(err.message)) {
+            console.warn('SQLite settings column migration warning:', err.message);
+        }
+    });
 });
 
 // Global state for session management
@@ -730,6 +737,18 @@ class BotSession {
         res.json({ accounts });
     });
 
+    app.get('/api/debug', (req, res) => {
+        db.all('SELECT COUNT(*) AS count FROM whatsapp_accounts', [], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({
+                dataDir: DATA_DIR,
+                dbPath,
+                accountCount: rows[0]?.count || 0,
+                activeSessions: Array.from(activeSessions.keys())
+            });
+        });
+    });
+
     app.post('/upload-auth', upload.array('authFiles'), (req, res) => {
         res.json({ message: 'Files uploaded successfully' });
     });
@@ -802,6 +821,7 @@ app.post('/api/connect', (req, res) => {
     db.run(`INSERT OR REPLACE INTO whatsapp_accounts (phone, name, session_id, created_at, expiry_at, status, settings) 
             VALUES (?, ?, ?, ?, ?, ?, ?)`, [phone, name, sessionId, createdAt, expiryAt, 'Connecting', settingsJson], async (err) => {
         if (err) return res.status(500).json({ error: err.message });
+        console.log(`Saved new account row for ${phone} into sqlite database.`);
 
         let session = activeSessions.get(phone);
         if (session) await session.stop();
@@ -884,6 +904,9 @@ function initAllSessions() {
     db.all('SELECT * FROM whatsapp_accounts WHERE status != ?', ['Expired'], async (err, rows) => {
         if (err) return console.error('Init sessions error:', err);
         console.log(`Found ${rows.length} accounts to initialize...`);
+        if (!rows.length) {
+            console.log('No saved whatsapp_accounts rows found in the database. This is usually caused by missing volume persistence.');
+        }
         for (const row of rows) {
             try {
                 let settings = {};

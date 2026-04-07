@@ -51,8 +51,9 @@ ENV NODE_ENV=production
 ENV DATA_DIR=/app/data
 ENV PORT=3000
 
-# Create the data directory (though a Volume should be mounted here)
+# Create and expose persistent data directory
 RUN mkdir -p /app/data
+VOLUME ["/app/data"]
 
 # Expose the dashboard port
 EXPOSE 3000
