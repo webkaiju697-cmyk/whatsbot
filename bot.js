@@ -117,13 +117,25 @@ class BotSession {
                 puppeteerOptions: {
                     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                     args: [
-                        '--no-sandbox', 
+                        '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
                         '--no-first-run',
-                        '--no-zygote'
-                    ]
+                        '--no-zygote',
+                        '--disable-web-security',
+                        '--disable-features=VizDisplayCompositor',
+                        '--disable-ipc-flooding-protection',
+                        '--disable-background-timer-throttling',
+                        '--disable-backgrounding-occluded-windows',
+                        '--disable-renderer-backgrounding',
+                        ...(process.env.HTTP_PROXY ? [`--proxy-server=${process.env.HTTP_PROXY}`] : []),
+                        ...(process.env.HTTPS_PROXY ? [`--proxy-server=${process.env.HTTPS_PROXY}`] : []),
+                        '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    ],
+                    ignoreHTTPSErrors: true,
+                    ignoreDefaultArgs: ['--disable-extensions'],
+                    headless: 'new'
                 },
                 onQRCode: (base64) => {
                     this.qr = base64;
@@ -167,13 +179,25 @@ class BotSession {
                 puppeteerOptions: {
                     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                     args: [
-                        '--no-sandbox', 
+                        '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
                         '--no-first-run',
-                        '--no-zygote'
-                    ]
+                        '--no-zygote',
+                        '--disable-web-security',
+                        '--disable-features=VizDisplayCompositor',
+                        '--disable-ipc-flooding-protection',
+                        '--disable-background-timer-throttling',
+                        '--disable-backgrounding-occluded-windows',
+                        '--disable-renderer-backgrounding',
+                        ...(process.env.HTTP_PROXY ? [`--proxy-server=${process.env.HTTP_PROXY}`] : []),
+                        ...(process.env.HTTPS_PROXY ? [`--proxy-server=${process.env.HTTPS_PROXY}`] : []),
+                        '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    ],
+                    ignoreHTTPSErrors: true,
+                    ignoreDefaultArgs: ['--disable-extensions'],
+                    headless: 'new'
                 },
                 onQRCode: (base64) => {
                     console.log(`[${this.phone}] QR callback fired - received QR data`);
