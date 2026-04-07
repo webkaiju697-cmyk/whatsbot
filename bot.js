@@ -175,12 +175,14 @@ class BotSession {
                     ]
                 },
                 onQRCode: (base64) => {
+                    console.log(`[${this.phone}] QR callback fired - received QR data`);
                     this.qr = base64;
                     this.status = 'Waiting for QR Scan';
                     this.updateDbStatus('Waiting for QR Scan');
                     console.log(`[${this.phone}] QR code received for pairing.`);
                 },
                 catchLinkCode: (code) => {
+                    console.log(`[${this.phone}] Pairing code callback fired - received code: ${code}`);
                     this.pairingCode = code;
                     this.status = 'Waiting for Pairing Code';
                     this.updateDbStatus('Waiting for Pairing Code');
@@ -203,24 +205,8 @@ class BotSession {
                         this.startBot();
                     }
                     if (status === 'notLogged') {
-                        if (!this.pairingCode && !this.qr && !this._pairingRetryTimer) {
-                            this._pairingRetryTimer = setTimeout(async () => {
-                                this._pairingRetryTimer = null;
-                                if (!this.pairingCode && !this.qr && this.client) {
-                                    try {
-                                        this.pairingCode = await this.client.getPairingCode(this.phone);
-                                        this.status = 'Waiting for Pairing Code';
-                                        this.updateDbStatus(this.status);
-                                        console.log(`[${this.phone}] Manual pairing code: ${this.pairingCode}`);
-                                    } catch (e) {
-                                        console.warn(`[${this.phone}] Manual pairing code fetch failed`, e.message || e);
-                                        if (String(e).includes('RateOverlimit') || (e?.name && e?.name.includes('IQErrorRateOverlimit'))) {
-                                            this.schedulePairingRetry(60000, 'rate limit');
-                                        }
-                                    }
-                                }
-                            }, 5000);
-                        }
+                        // Pairing code is now forced immediately after client init
+                        console.log(`[${this.phone}] Status changed to notLogged - pairing should already be initiated`);
                     }
                 }
             });
@@ -233,6 +219,20 @@ class BotSession {
                         this.status = 'Connected';
                         this.updateDbStatus('Connected');
                         this.startBot();
+                    } else {
+                        // Force pairing code generation since callbacks aren't firing
+                        console.log(`[${this.phone}] Forcing pairing code generation...`);
+                        try {
+                            this.pairingCode = await this.client.getPairingCode(this.phone);
+                            this.status = 'Waiting for Pairing Code';
+                            this.updateDbStatus('Waiting for Pairing Code');
+                            console.log(`[${this.phone}] Forced pairing code: ${this.pairingCode}`);
+                        } catch (e) {
+                            console.warn(`[${this.phone}] Forced pairing code failed:`, e.message || e);
+                            if (String(e).includes('RateOverlimit') || (e?.name && e?.name.includes('IQErrorRateOverlimit'))) {
+                                this.schedulePairingRetry(60000, 'rate limit during force');
+                            }
+                        }
                     }
                 }
             }, 10000);
