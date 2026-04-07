@@ -53,6 +53,7 @@ class BotSession {
         this.status = 'Idle';
         this.qr = '';
         this.pairingCode = '';
+        this._pairingRetryTimer = null;
         
         // Raid State (Per Session)
         this.raidState = {
@@ -185,19 +186,27 @@ class BotSession {
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
                         this.qr = '';
+                        if (this._pairingRetryTimer) {
+                            clearTimeout(this._pairingRetryTimer);
+                            this._pairingRetryTimer = null;
+                        }
                         this.startBot();
                     }
                     if (status === 'notLogged') {
-                        // Attempt to force code if not received yet
-                        setTimeout(async () => {
-                            if (!this.pairingCode && this.client) {
-                                try {
-                                    this.pairingCode = await this.client.getPairingCode(this.phone);
-                                    this.status = 'Waiting for Pairing Code';
-                                    console.log(`[${this.phone}] Manual pairing code: ${this.pairingCode}`);
-                                } catch (e) {}
-                            }
-                        }, 5000);
+                        if (!this.pairingCode && !this.qr && !this._pairingRetryTimer) {
+                            this._pairingRetryTimer = setTimeout(async () => {
+                                this._pairingRetryTimer = null;
+                                if (!this.pairingCode && !this.qr && this.client) {
+                                    try {
+                                        this.pairingCode = await this.client.getPairingCode(this.phone);
+                                        this.status = 'Waiting for Pairing Code';
+                                        console.log(`[${this.phone}] Manual pairing code: ${this.pairingCode}`);
+                                    } catch (e) {
+                                        console.warn(`[${this.phone}] Manual pairing code fetch failed`, e.message || e);
+                                    }
+                                }
+                            }, 5000);
+                        }
                     }
                 }
             });
