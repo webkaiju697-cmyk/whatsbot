@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
+    libasound2 \
     libnss3 \
     libnspr4 \
     libdbus-1-3 \
