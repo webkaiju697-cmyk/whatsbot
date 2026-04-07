@@ -60,6 +60,7 @@ class BotSession {
         this.pairingCode = '';
         this._pairingRetryTimer = null;
         this._rateLimitRetryTimer = null;
+        this._botStarted = false;
         
         // Raid State (Per Session)
         this.raidState = {
@@ -188,10 +189,17 @@ class BotSession {
                     this.updateDbStatus('Waiting for Pairing Code');
                     console.log(`[${this.phone}] Pairing Code generated (via catchLinkCode): ${code}`);
                 },
+                onReady: () => {
+                    console.log(`[${this.phone}] WhatsApp client is ready`);
+                    if (!this._botStarted) {
+                        this._botStarted = true;
+                        this.startBot();
+                    }
+                },
                 statusFind: async (status) => {
                     this.status = status;
                     this.updateDbStatus(status);
-                            if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
+                    if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
                         this.qr = '';
                         if (this._pairingRetryTimer) {
@@ -202,11 +210,15 @@ class BotSession {
                             clearTimeout(this._rateLimitRetryTimer);
                             this._rateLimitRetryTimer = null;
                         }
-                        if (this.client) {
-                            this.startBot();
-                        } else {
-                            console.error(`[${this.phone}] startBot skipped after login: client is null`);
-                        }
+                        // Delay startBot to ensure client is fully ready
+                        setTimeout(() => {
+                            if (this.client && !this._botStarted) {
+                                this._botStarted = true;
+                                this.startBot();
+                            } else if (!this.client) {
+                                console.error(`[${this.phone}] startBot still skipped after delay: client is null`);
+                            }
+                        }, 2000);
                     }
                     if (status === 'notLogged') {
                         // Pairing code is now forced immediately after client init
