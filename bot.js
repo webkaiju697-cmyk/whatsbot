@@ -42,6 +42,11 @@ db.serialize(() => {
 // Global state for session management
 const activeSessions = new Map(); // phone -> BotSession instance
 
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', reason);
+    if (promise) console.error('Promise:', promise);
+});
+
 class BotSession {
     constructor(config) {
         this.phone = config.phone;
@@ -656,7 +661,7 @@ app.post('/api/connect', async (req, res) => {
         activeSessions.set(phone, session);
         
         // Start initialization in background
-        session.initWithPairing();
+        session.initWithPairing().catch(e => console.error(`[${phone}] Session init failed:`, e));
         res.json({ message: 'Connection initiated', phone });
     });
 });
