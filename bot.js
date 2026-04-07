@@ -425,6 +425,26 @@ class BotSession {
         }
     }
 
+    saveRaidState() {
+        fs.writeFileSync(this.paths.raidState, JSON.stringify(this.raidState, null, 2));
+    }
+
+    loadRaidState() {
+        if (fs.existsSync(this.paths.raidState)) {
+            try {
+                const loaded = JSON.parse(fs.readFileSync(this.paths.raidState, 'utf8'));
+                // Merge loaded state with current raidState, preserving non-serializable properties
+                Object.assign(this.raidState, loaded);
+                // Clear timers since they can't be restored from JSON
+                this.raidState.submissionTimer = null;
+                this.raidState.engagementTimer = null;
+                this.raidState.warningTimer = null;
+            } catch (e) {
+                console.warn(`[${this.phone}] Failed to load raid state:`, e.message);
+            }
+        }
+    }
+
     scheduleDailyRaid(groupId, hours, minutes, hostId, scheduleId, subDelta, engDelta) {
         const settings = this.groupSettings[groupId] || { timezone: 'UTC' };
         const tz = settings.timezone;
