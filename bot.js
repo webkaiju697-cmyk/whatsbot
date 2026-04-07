@@ -59,6 +59,7 @@ class BotSession {
         this.qr = '';
         this.pairingCode = '';
         this._pairingRetryTimer = null;
+        this._rateLimitRetryTimer = null;
         
         // Raid State (Per Session)
         this.raidState = {
@@ -188,12 +189,16 @@ class BotSession {
                 statusFind: async (status) => {
                     this.status = status;
                     this.updateDbStatus(status);
-                    if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
+                            if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
                         this.qr = '';
                         if (this._pairingRetryTimer) {
                             clearTimeout(this._pairingRetryTimer);
                             this._pairingRetryTimer = null;
+                        }
+                        if (this._rateLimitRetryTimer) {
+                            clearTimeout(this._rateLimitRetryTimer);
+                            this._rateLimitRetryTimer = null;
                         }
                         this.startBot();
                     }
@@ -205,9 +210,13 @@ class BotSession {
                                     try {
                                         this.pairingCode = await this.client.getPairingCode(this.phone);
                                         this.status = 'Waiting for Pairing Code';
+                                        this.updateDbStatus(this.status);
                                         console.log(`[${this.phone}] Manual pairing code: ${this.pairingCode}`);
                                     } catch (e) {
                                         console.warn(`[${this.phone}] Manual pairing code fetch failed`, e.message || e);
+                                        if (String(e).includes('RateOverlimit') || (e?.name && e?.name.includes('IQErrorRateOverlimit'))) {
+                                            this.schedulePairingRetry(60000, 'rate limit');
+                                        }
                                     }
                                 }
                             }, 5000);
@@ -230,8 +239,38 @@ class BotSession {
 
         } catch (error) {
             console.error(`[${this.phone}] Failed to init with pairing:`, error);
-            this.status = 'Error';
+            if (String(error).includes('RateOverlimit') || (error?.name && error?.name.includes('IQErrorRateOverlimit'))) {
+                this.schedulePairingRetry(60000, 'rate limit during init');
+            } else {
+                this.status = 'Error';
+                this.updateDbStatus(this.status);
+            }
         }
+    }
+
+    schedulePairingRetry(delayMs, reason) {
+        if (this._rateLimitRetryTimer) return;
+        console.warn(`[${this.phone}] Scheduling pairing retry in ${delayMs / 1000}s (${reason})`);
+        this.status = 'Retrying pairing';
+        this.updateDbStatus(this.status);
+        this._rateLimitRetryTimer = setTimeout(async () => {
+            this._rateLimitRetryTimer = null;
+            try {
+                if (!this.client) {
+                    await this.initWithPairing();
+                } else if (!this.pairingCode && !this.qr) {
+                    this.pairingCode = await this.client.getPairingCode(this.phone);
+                    this.status = 'Waiting for Pairing Code';
+                    this.updateDbStatus(this.status);
+                    console.log(`[${this.phone}] Recovered manual pairing code: ${this.pairingCode}`);
+                }
+            } catch (err) {
+                console.error(`[${this.phone}] Pairing retry failed:`, err);
+                if (String(err).includes('RateOverlimit') || (err?.name && err?.name.includes('IQErrorRateOverlimit'))) {
+                    this.schedulePairingRetry(Math.min(delayMs * 2, 120000), 'rate limit');
+                }
+            }
+        }, delayMs);
     }
 
     async updateDbStatus(status) {
