@@ -584,6 +584,39 @@ class BotSession {
         this.saveRaidState();
     }
 
+    async endRaid() {
+        if (!this.raidState.active) return;
+        const groupId = this.raidState.groupId;
+        if (this.raidState.submissionTimer) {
+            clearTimeout(this.raidState.submissionTimer);
+            this.raidState.submissionTimer = null;
+        }
+        if (this.raidState.engagementTimer) {
+            clearTimeout(this.raidState.engagementTimer);
+            this.raidState.engagementTimer = null;
+        }
+        if (this.raidState.warningTimer) {
+            clearTimeout(this.raidState.warningTimer);
+            this.raidState.warningTimer = null;
+        }
+        this.raidState.active = false;
+        this.raidState.phase = 0;
+        this.raidState.groupId = null;
+        this.raidState.participants = new Set();
+        this.raidState.participantMap = new Map();
+        this.raidState.linkToSenderMap = new Map();
+        this.raidState.firstMsgId = null;
+        this.raidState.lastMsgId = null;
+        this.raidState.links = new Set();
+        this.raidState.startTime = null;
+        this.raidState.submissionEndTime = null;
+        this.raidState.engagementEndTime = null;
+        this.raidState.hostId = null;
+        this.saveRaidState();
+        try { await this.client.setGroupProperty(groupId, 'announcement', false); } catch (e) {}
+        await this.client.sendText(groupId, 'Raid has been manually ended by an admin.');
+    }
+
     async isUserAdmin(groupId, authorId) {
         try {
             const admins = await this.client.getGroupAdmins(groupId);
@@ -607,7 +640,7 @@ class BotSession {
             
             // Admin Check
             if (message.isGroupMsg) {
-                const adminCommands = ['.startraid', '.endraid', '.mute', '.unmute', '.schedule', '.delete'];
+                const adminCommands = ['.startraid', '.endraid', '.mute', '.unmute', '.unmite', '.schedule', '.delete'];
                 if (adminCommands.some(cmd => message.body.startsWith(cmd))) {
                     const isAdmin = await this.isUserAdmin(message.from, message.author || message.from);
                     if (!isAdmin) {
@@ -657,6 +690,37 @@ class BotSession {
                 });
                 res += `To remove a raid, use: \`.delete ID\``;
                 await this.client.sendText(message.from, res);
+            }
+
+            if (message.body === '.startraid') {
+                if (this.raidState.active) {
+                    await this.client.sendText(message.from, '⚠ A raid is already active. Use .endraid to stop it first.');
+                } else {
+                    await this.startScheduledRaid(message.from, message.author || message.from);
+                    await this.client.sendText(message.from, '✅ Raid started manually.');
+                }
+                return;
+            }
+
+            if (message.body === '.endraid') {
+                if (!this.raidState.active) {
+                    await this.client.sendText(message.from, '⚠ No active raid to end.');
+                } else {
+                    await this.endRaid();
+                    await this.client.sendText(message.from, '✅ Raid ended successfully.');
+                }
+                return;
+            }
+
+            if (message.body === '.mute' || message.body === '.unmute' || message.body === '.unmite') {
+                const mute = message.body === '.mute';
+                try {
+                    await this.client.setGroupProperty(message.from, 'announcement', mute);
+                    await this.client.sendText(message.from, `✅ Group chat has been ${mute ? 'muted' : 'unmuted'}.`);
+                } catch (e) {
+                    await this.client.sendText(message.from, '⚠ Failed to update group chat mode.');
+                }
+                return;
             }
 
             if (message.body.startsWith('.delete ')) {
