@@ -736,20 +736,34 @@ app.get('/api/accounts', (req, res) => {
         const results = rows.map(row => {
             let settings = {};
             try { settings = JSON.parse(row.settings || '{}'); } catch (e) {}
+            const active = activeSessions.get(row.phone);
             return {
                 ...row,
                 settings,
-                currentStatus: activeSessions.get(row.phone)?.status || 'Offline',
-                pairingCode: activeSessions.get(row.phone)?.pairingCode || '',
-                qr: activeSessions.get(row.phone)?.qr || ''
+                currentStatus: active?.status || row.status || 'Offline',
+                pairingCode: active?.pairingCode || '',
+                qr: active?.qr || ''
             };
         });
-        res.json(results);
-    });
-});
 
-// API: Connect new account
-app.post('/api/connect', async (req, res) => {
+        // Include any active sessions without a DB row so dashboard still shows live connections
+        for (const [phone, session] of activeSessions.entries()) {
+            if (!results.some(acc => acc.phone === phone)) {
+                results.push({
+                    phone,
+                    name: session.name || phone,
+                    session_id: session.sessionId,
+                    created_at: Date.now(),
+                    expiry_at: session.expiryAt || Date.now() + (30 * 24 * 60 * 60 * 1000),
+                    status: session.status || 'Connected',
+                    settings: session.settings || {},
+                    currentStatus: session.status || 'Connected',
+                    pairingCode: session.pairingCode || '',
+                    qr: session.qr || ''
+                });
+            }
+        }
+
     const { name, phone, settings } = req.body;
     if (!name || !phone) return res.status(400).json({ error: 'Name and Phone are required' });
 
