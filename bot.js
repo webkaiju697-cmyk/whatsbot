@@ -202,7 +202,11 @@ class BotSession {
                             clearTimeout(this._rateLimitRetryTimer);
                             this._rateLimitRetryTimer = null;
                         }
-                        this.startBot();
+                        if (this.client) {
+                            this.startBot();
+                        } else {
+                            console.error(`[${this.phone}] startBot skipped after login: client is null`);
+                        }
                     }
                     if (status === 'notLogged') {
                         // Pairing code is now forced immediately after client init
@@ -278,6 +282,10 @@ class BotSession {
     }
 
     startBot() {
+        if (!this.client) {
+            console.error(`[${this.phone}] startBot aborted: client is null or unavailable`);
+            return;
+        }
         console.log(`[${this.phone}] Starting bot logic...`);
         this.loadSettings();
         this.loadSchedules();
@@ -525,6 +533,11 @@ class BotSession {
     }
 
     setupMessageListener() {
+        if (!this.client || typeof this.client.onAnyMessage !== 'function') {
+            console.warn(`[${this.phone}] setupMessageListener skipped: client unavailable or missing onAnyMessage`);
+            return;
+        }
+
         this.client.onAnyMessage(async (message) => {
             if (!message.body) return;
             
