@@ -46,7 +46,7 @@ class BotSession {
     constructor(config) {
         this.phone = config.phone;
         this.name = config.name;
-        this.sessionId = config.sessionId;
+        this.sessionId = config.sessionId || `session_${String(this.phone || '').replace(/\D/g, '')}`;
         this.expiryAt = config.expiryAt;
         this.settings = config.settings || {}; // pre-connection bot settings
         this.client = null;
@@ -167,6 +167,12 @@ class BotSession {
                         '--no-zygote'
                     ]
                 },
+                onQRCode: (base64) => {
+                    this.qr = base64;
+                    this.status = 'Waiting for QR Scan';
+                    this.updateDbStatus('Waiting for QR Scan');
+                    console.log(`[${this.phone}] QR code received for pairing.`);
+                },
                 catchLinkCode: (code) => {
                     this.pairingCode = code;
                     this.status = 'Waiting for Pairing Code';
@@ -178,6 +184,7 @@ class BotSession {
                     this.updateDbStatus(status);
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
+                        this.qr = '';
                         this.startBot();
                     }
                     if (status === 'notLogged') {
@@ -718,10 +725,14 @@ function initAllSessions() {
             try {
                 let settings = {};
                 try { settings = JSON.parse(row.settings || '{}'); } catch (e) {}
+                const sessionId = row.session_id && row.session_id.trim()
+                    ? row.session_id
+                    : `session_${String(row.phone || '').replace(/\D/g, '')}`;
+
                 const session = new BotSession({
                     phone: row.phone,
                     name: row.name,
-                    sessionId: row.session_id,
+                    sessionId,
                     expiryAt: row.expiry_at,
                     settings
                 });
