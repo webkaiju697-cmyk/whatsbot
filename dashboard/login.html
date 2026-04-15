@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaijuBot Auth Portal</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --brand-main: #3b82f6;
+            --brand-glow: rgba(59, 130, 246, 0.5);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 2.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .auth-toggle {
+            display: flex;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 2rem;
+        }
+
+        .auth-toggle button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .auth-toggle button.active {
+            background: var(--glass-bg);
+            color: var(--text-main);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: var(--brand-main);
+            box-shadow: 0 0 0 2px var(--brand-glow);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s ease, transform 0.1s ease;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.9;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 1rem;
+            min-height: 20px;
+        }
+
+        /* Decorative circles */
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 1;
+        }
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            background: rgba(59, 130, 246, 0.3);
+            top: -100px;
+            left: -100px;
+        }
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background: rgba(139, 92, 246, 0.2);
+            bottom: -200px;
+            right: -100px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2"></div>
+
+    <div class="auth-container">
+        <div class="logo">
+            <h1>KaijuBot Web</h1>
+            <p>Commercial Accounts Dashboard</p>
+        </div>
+
+        <div class="auth-toggle">
+            <button class="active" onclick="setMode('login')" id="btn-login-toggle">Sign In</button>
+            <button onclick="setMode('signup')" id="btn-signup-toggle">Sign Up</button>
+        </div>
+
+        <form id="auth-form" onsubmit="handleAuth(event)">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="off">
+            </div>
+            
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submit-btn">Enter Portal</button>
+            <div class="error-message" id="error-msg"></div>
+        </form>
+    </div>
+
+    <script>
+        let mode = 'login'; // 'login' or 'signup'
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.getElementById('btn-login-toggle').classList.toggle('active', mode === 'login');
+            document.getElementById('btn-signup-toggle').classList.toggle('active', mode === 'signup');
+            document.getElementById('submit-btn').textContent = mode === 'login' ? 'Enter Portal' : 'Create Account';
+            document.getElementById('error-msg').textContent = '';
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorElement = document.getElementById('error-msg');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (!username || !password) {
+                errorElement.textContent = 'Please fill all fields.';
+                return;
+            }
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                errorElement.textContent = '';
+
+                const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Authentication failed');
+                }
+
+                if (mode === 'signup') {
+                    // Auto-login after sign up
+                    setMode('login');
+                    await handleAuth(new Event('submit'));
+                } else {
+                    // Logged in
+                    window.location.href = '/';
+                }
+
+            } catch (err) {
+                errorElement.textContent = err.message;
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,31 +1,13 @@
-# Use smaller base image with Node.js and system dependencies
-FROM node:20-slim
+# Use the official Playwright image as it includes all browser dependencies
+FROM mcr.microsoft.com/playwright:v1.52.0-noble
 
 # Set working directory
 WORKDIR /app
 
-# Install minimal browser dependencies and Python in one layer
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install Python and pip (Nixpacks usually handles this, but since we use a custom base image, we do it here)
+RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
-    libasound2 \
-    libnss3 \
-    libnspr4 \
-    libdbus-1-3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files
@@ -37,11 +19,7 @@ RUN npm ci
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
-
-# Install Playwright with only Chromium
-RUN npm install -g @playwright/cli && \
-    npx playwright install chromium && \
-    rm -rf /root/.cache
+RUN playwright install chromium
 
 # Copy the rest of the application
 COPY . .
@@ -51,7 +29,7 @@ ENV NODE_ENV=production
 ENV DATA_DIR=/app/data
 ENV PORT=3000
 
-# Create persistent data directory
+# Create the data directory (though a Volume should be mounted here)
 RUN mkdir -p /app/data
 
 # Expose the dashboard port

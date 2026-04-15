@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Bot Hub | Multi-Session Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #020617;
+            --card-bg: rgba(15, 23, 42, 0.6);
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent-glow: radial-gradient(circle at center, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            background-image: var(--accent-glow);
+            background-attachment: fixed;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo { font-size: 1.75rem; font-weight: 800; letter-spacing: -1px; display: flex; align-items: center; gap: 0.75rem; }
+        .logo span { background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .stat-badge { background: rgba(56, 189, 248, 0.1); color: var(--primary); padding: 0.5rem 1rem; border-radius: 99px; font-size: 0.875rem; font-weight: 600; border: 1px solid rgba(56, 189, 248, 0.2); }
+
+        .main-grid { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; }
+
+        .card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid var(--border); 
+            border-radius: 24px; 
+            padding: 2rem;
+            box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .card-title i { color: var(--primary); }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
+        
+        input { 
+            width: 100%; 
+            padding: 0.875rem 1rem; 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            color: #fff; 
+            transition: all 0.2s;
+            font-size: 0.9375rem;
+        }
+        input:focus { outline: none; border-color: var(--primary); background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1); }
+
+        .btn { 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 0.5rem; 
+            padding: 0.875rem 1.5rem; 
+            border: none; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all 0.23s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9375rem;
+            width: 100%;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px var(--primary); opacity: 0.9; }
+
+        .pairing-card { 
+            margin-top: 2rem; 
+            padding: 1.5rem; 
+            background: rgba(56, 189, 248, 0.05); 
+            border-radius: 16px; 
+            border: 1px dashed rgba(56, 189, 248, 0.3);
+            text-align: center;
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .pairing-code { font-family: 'Monaco', 'Consolas', monospace; font-size: 1.5rem; letter-spacing: 2px; color: var(--primary); margin: 0.5rem 0; font-weight: 700; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0 0.75rem; margin-top: -0.75rem; }
+        th { text-align: left; padding: 1rem; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; }
+        tr { transition: transform 0.2s; }
+        td { padding: 1.25rem 1rem; background: rgba(255, 255, 255, 0.02); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        td:first-child { border-left: 1px solid var(--border); border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
+        td:last-child { border-right: 1px solid var(--border); border-top-right-radius: 16px; border-bottom-right-radius: 16px; }
+
+        .status-pill { padding: 0.375rem 0.75rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.375rem; }
+        .status-connected { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-connecting { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .status-disconnected { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .status-expired { background: rgba(148, 163, 184, 0.1); color: var(--text-muted); text-decoration: line-through; }
+
+        .worker-section { margin-top: 3rem; }
+        .worker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+        .worker-card { 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid var(--border); 
+            border-radius: 16px; 
+            padding: 1.25rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .worker-card:hover { border-color: rgba(56, 189, 248, 0.3); background: rgba(255, 255, 255, 0.05); }
+
+        .action-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; background: transparent; color: var(--danger); }
+        .action-icon:hover { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); }
+
+        #uploadForm { display: flex; gap: 1rem; margin-bottom: 2rem; align-items: flex-start; }
+        #uploadForm .btn { width: auto; min-width: 180px; padding: 0.875rem 1.5rem; }
+
+        .file-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .file-label-custom {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1;
+        }
+        .file-input-wrapper:hover .file-label-custom {
+            border-color: rgba(56, 189, 248, 0.5);
+            background: rgba(56, 189, 248, 0.05);
+            color: var(--text);
+            box-shadow: 0 0 15px -5px rgba(56, 189, 248, 0.3);
+        }
+        .file-input-wrapper:hover .file-label-custom svg {
+            transform: scale(1.1);
+            color: var(--primary);
+        }
+        .file-label-custom svg { transition: all 0.2s; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-content {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 32px;
+            padding: 3rem; width: 100%; max-width: 450px; text-align: center;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid rgba(56, 189, 248, 0.1); border-top-color: var(--primary);
+            border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-pairing-box { 
+            background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); 
+            border-radius: 20px; padding: 2rem; margin: 1.5rem 0; 
+        }
+        .modal-pairing-box .pairing-code { font-size: 2.5rem; letter-spacing: 4px; }
+        .success-icon { margin-bottom: 1.5rem; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* ---- SETTINGS PANEL ---- */
+        .settings-toggle-btn {
+            width: 100%; background: none; border: 1px dashed rgba(56,189,248,0.25);
+            border-radius: 10px; color: var(--primary); padding: 0.65rem 1rem;
+            font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem; margin: 1.25rem 0 0;
+            transition: all 0.2s; letter-spacing: 0.02em;
+        }
+        .settings-toggle-btn:hover { background: rgba(56,189,248,0.07); border-color: rgba(56,189,248,0.5); }
+        .settings-toggle-btn svg { transition: transform 0.3s; }
+        .settings-toggle-btn.open svg { transform: rotate(180deg); }
+
+        .settings-panel {
+            overflow: hidden; max-height: 0;
+            transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
+            opacity: 0;
+        }
+        .settings-panel.open { max-height: 700px; opacity: 1; }
+        .settings-panel-inner {
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+        .settings-section-label {
+            font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--secondary); margin-bottom: 0.75rem;
+        }
+        .settings-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+        /* Toggle Switch */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+        .toggle-row label { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+        .toggle-row small { display: block; color: var(--text-muted); font-size: 0.7rem; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background-color: rgba(255,255,255,0.08); transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Settings info in table */
+        .settings-tag {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            background: rgba(129,140,248,0.1); color: var(--secondary);
+            border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.7rem; font-weight: 700;
+            border: 1px solid rgba(129,140,248,0.2); white-space: nowrap;
+        }
+        select {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: #fff;
+            transition: all 0.2s;
+            font-size: 0.9375rem;
+            font-family: inherit;
+            appearance: none;
+            cursor: pointer;
+        }
+        select:focus { outline: none; border-color: var(--primary); background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1); }
+        select option { background: #0f172a; }
+
+        .raid-schedule-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+        .remove-schedule-btn {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            color: var(--danger); cursor: pointer; opacity: 0.6;
+        }
+        .remove-schedule-btn:hover { opacity: 1; }
+        .add-schedule-btn {
+            width: 100%; border: 1px dashed var(--primary); color: var(--primary);
+            background: rgba(56, 189, 248, 0.05); padding: 0.5rem; border-radius: 8px;
+            font-size: 0.75rem; font-weight: 600; cursor: pointer; margin-bottom: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="connectionModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modalLoading">
+                <div class="spinner"></div>
+                <h3 id="modalLoadingTitle">Generating Pairing Code</h3>
+                <p id="modalLoadingText">Establishing secure connection for <span id="modalTargetPhone" style="color:var(--primary); font-weight:600;"></span>...</p>
+                <div id="modalStatusBadge" style="margin-top: 1rem; font-size: 0.7rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px;">Status: Connecting</div>
+            </div>
+            <div id="modalResult" style="display: none;">
+                <div class="success-icon">
+                    <svg width="48" height="48" fill="none" stroke="var(--success)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <h3>Ready to Pair</h3>
+                <p>Link your device using the code below:</p>
+                <div class="modal-pairing-box">
+                    <div id="modalPairCode" class="pairing-code">--------</div>
+                    <button class="btn btn-primary" onclick="copyPairingCode()" id="copyBtn" style="margin-top: 1rem; width: auto;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                        Copy Code
+                    </button>
+                    <div id="copyToast" style="display: none; color: var(--success); font-size: 0.75rem; margin-top: 0.5rem; font-weight: 600;">Code copied to clipboard!</div>
+                </div>
+                <button class="btn" style="background: rgba(255,255,255,0.05); margin-top: 1.5rem;" onclick="closeModal()">Back to Dashboard</button>
+            </div>
+            <div id="modalSuccess" style="display: none;">
+                <div class="success-icon">
+                    <div class="spinner" style="width: 60px; height: 60px; border-color: rgba(16, 185, 129, 0.1); border-top-color: var(--success); margin-bottom: 2rem;"></div>
+                    <svg width="64" height="64" fill="none" stroke="var(--success)" viewBox="0 0 24 24" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -75%);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <h2 style="color: var(--success); margin-bottom: 0.5rem;">Connected!</h2>
+                <p>WhatsApp session is now active.</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1.5rem;">The dashboard will refresh automatically...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo"><span>Commercial</span> Bot Hub</div>
+            <div style="display:flex; align-items:center; gap:1rem;">
+                <div class="stat-badge" id="system-status">System Operational</div>
+                <div class="user-profile" id="userProfile"></div>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <aside>
+                <div class="card">
+                    <div class="card-title">Add Commercial User</div>
+                    <form id="connectForm">
+                        <div class="form-group">
+                            <label>Account Name</label>
+                            <input type="text" id="userName" placeholder="e.g. Premium Client A" required>
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp Number</label>
+                            <input type="text" id="userPhone" placeholder="e.g. 234xxxxxxxxxx" required>
+                        </div>
+                        <button type="button" class="settings-toggle-btn" id="settingsToggleBtn" onclick="toggleSettings()">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><circle cx="12" cy="12" r="3" /></svg>
+                            &#9881; Session Settings
+                            <svg style="margin-left:auto" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+
+                        <div class="settings-panel" id="settingsPanel">
+                            <div class="settings-panel-inner">
+                                <div class="toggle-row">
+                                    <div>
+                                        <label>Auto-Schedule Daily Raid</label>
+                                        <small>Starts raid automatically at the set time each day</small>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" id="settingAutoRaid">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="settings-section-label" style="margin-top:1rem">&#9200; Raid Management</div>
+                                <div id="raidSchedulesList"></div>
+                                <button type="button" class="add-schedule-btn" onclick="addRaidSchedule()">+ Add Another Raid</button>
+                                <div class="settings-section-label" style="margin-top:0.25rem">&#127758; Timezone</div>
+                                <div class="form-group">
+                                    <label>Session Timezone</label>
+                                    <select id="settingTimezone">
+                                        <option value="UTC">UTC (Coordinated Universal Time)</option>
+                                        <option value="Lagos">Lagos / WAT (West Africa Time, UTC+1)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem;">Authorize & Connect</button>
+                    </form>
+
+                    <div id="pairingPanel" class="pairing-card">
+                        <small style="color: var(--text-muted)">Current Pairing Code</small>
+                        <div id="pairPhone" style="font-size: 0.75rem; margin-top: 0.25rem;"></div>
+                        <div id="pairCode" class="pairing-code">--------</div>
+                        <button class="btn" style="background: rgba(255,255,255,0.03); font-size: 0.75rem; padding: 0.5rem;" onclick="copyCodeFromPanel()">Copy Code</button>
+                    </div>
+                </div>
+            </aside>
+
+            <main>
+                <div class="card admin-only" id="adminUsersPanel" style="display:none; margin-bottom: 2rem;">
+                    <div class="card-title">User Ledger (Web3Kaiju Admin View)</div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Joined Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userLedgerList"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Active Commercial Subscriptions</div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Client / ID</th>
+                                    <th>Status</th>
+                                    <th>Subscription</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountList"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="worker-section card admin-only" style="display:none;">
+                    <div class="card-title">Worker Node Assets (X.com Sessions)</div>
+                    <form id="uploadForm">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="authFiles" name="authFiles" multiple accept=".json" onchange="updateFileLabel(this)">
+                            <div class="file-label-custom" id="fileLabelDisplay">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <span id="fileNameText">Click to choose session files (.json)</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l4-4m0 0l4 4m-4-4v12" /></svg>
+                            Upload Sessions
+                        </button>
+                    </form>
+                    <div id="workerGrid" class="worker-grid"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        let currentPollingPhone = null;
+        let currentUser = null;
+
+        async function fetchUser() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (!res.ok) { window.location.href = '/login.html'; return; }
+                currentUser = await res.json();
+                
+                document.getElementById('userProfile').innerHTML = `
+                    <span style="font-size: 0.85rem; margin-right: 15px; border-left: 1px solid var(--border); padding-left: 15px;">
+                        Logged in as: <strong style="color:var(--primary);">${currentUser.username}</strong> 
+                        <span class="status-pill status-connected" style="font-size:0.6rem; padding: 0.15rem 0.5rem; margin-left: 5px;">${currentUser.role.toUpperCase()}</span>
+                    </span>
+                    <button class="btn" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 0.4rem 1rem; font-size: 0.75rem; width: auto;" onclick="logout()">Logout</button>
+                `;
+
+                if (currentUser.role === 'admin') {
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                    fetchAdminLedger();
+                } else {
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                }
+            } catch (e) {
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        }
+
+        async function fetchAdminLedger() {
+            if (currentUser?.role !== 'admin') return;
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
+                document.getElementById('userLedgerList').innerHTML = users.map(u => `
+                    <tr>
+                        <td style="border-left:none;">#${u.id}</td>
+                        <td><strong>${u.username}</strong></td>
+                        <td><span class="settings-tag">${u.role}</span></td>
+                        <td style="border-right:none;">${new Date(u.created_at).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+            } catch(e) {}
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/accounts');
+                const accounts = await res.json();
+                const accountList = document.getElementById('accountList');
+                
+                let anyActivePairing = false;
+
+                accountList.innerHTML = accounts
+                    .map(acc => {
+                        const daysLeft = Math.ceil((new Date(acc.expiry_at) - new Date()) / (1000 * 60 * 60 * 24));
+                        const statusClass = `status-${acc.currentStatus.toLowerCase().split(' ')[0]}`;
+                        
+                        // Handle modal updates for ALL accounts (including pending ones)
+                        if (currentPollingPhone === acc.phone) {
+                            const loadingTitle = document.getElementById('modalLoadingTitle');
+                            const loadingStatus = document.getElementById('modalStatusBadge');
+                            
+                            if (loadingStatus) loadingStatus.textContent = `Status: ${acc.currentStatus}`;
+
+                            if (['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
+                                showSuccessMessage();
+                            } else if (acc.pairingCode) {
+                                showPairingResult(acc.pairingCode);
+                            } else if (acc.currentStatus.includes('Rate Limited')) {
+                                if (loadingTitle) loadingTitle.textContent = "Rate Limit Hit";
+                                document.getElementById('modalLoadingText').innerHTML = `<span style="color:var(--danger)">WhatsApp has limited pairing requests.</span><br>Please wait 5-10 minutes and try again.`;
+                            }
+                        }
+
+                        if (acc.pairingCode) {
+                            anyActivePairing = true;
+                            document.getElementById('pairingPanel').style.display = 'block';
+                            document.getElementById('pairPhone').textContent = acc.phone;
+                            document.getElementById('pairCode').textContent = acc.pairingCode;
+                        }
+
+                        // ONLY return HTML row if the account is persisted (in the DB)
+                        if (!acc.isPersisted) return '';
+
+                        const formatTime = (h, m) => {
+                            if (h === undefined || m === undefined) return '--:--';
+                            const hour = parseInt(h);
+                            const min = String(m).padStart(2, '0');
+                            const ampm = hour >= 12 ? 'PM' : 'AM';
+                            const h12 = hour % 12 || 12;
+                            return `${h12}:${min} ${ampm}`;
+                        };
+
+                        return `
+                            <tr>
+                                <td><strong>${acc.name}</strong><br><span style="font-size: 0.75rem; color: var(--text-muted)">${acc.phone}</span></td>
+                                <td><span class="status-pill ${statusClass}">${acc.currentStatus}</span></td>
+                                <td>
+                                    <span style="font-weight:600; color: ${daysLeft > 5 ? 'var(--text)' : 'var(--danger)'}">${daysLeft > 0 ? daysLeft + ' days' : 'Expired'}</span>
+                                    ${acc.settings && acc.settings.autoRaidEnabled && acc.settings.schedules ? 
+                                        acc.settings.schedules.map(s => `<br><span class="settings-tag">⏰ ${formatTime(s.time.split(':')[0], s.time.split(':')[1])}</span>`).join('') 
+                                        : ''}
+                                </td>
+                                <td><button class="action-icon" onclick="deleteAccount('${acc.phone}')"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                if (!anyActivePairing) document.getElementById('pairingPanel').style.display = 'none';
+
+                const statusRes = await fetch('/status');
+                const statusData = await statusRes.json();
+                const workerGrid = document.getElementById('workerGrid');
+                workerGrid.innerHTML = statusData.accounts.map(file => `
+                    <div class="worker-card">
+                        <span style="font-size: 0.875rem">${file}</span>
+                        <button class="action-icon" onclick="deleteWorker('${file}')"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                    </div>
+                `).join('') || '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted)">No worker sessions.</div>';
+
+            } catch (err) { console.error(err); }
+        }
+
+        document.getElementById('connectForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+
+            // Collect settings
+            const schedules = [];
+            document.querySelectorAll('.raid-schedule-item').forEach(item => {
+                schedules.push({
+                    time: item.querySelector('.raid-time').value,
+                    subDuration: item.querySelector('.raid-sub-duration').value,
+                    engDuration: item.querySelector('.raid-eng-duration').value
+                });
+            });
+
+            const settings = {
+                autoRaidEnabled: document.getElementById('settingAutoRaid').checked,
+                schedules: schedules,
+                timezone: document.getElementById('settingTimezone').value,
+            };
+            
+            document.getElementById('modalTargetPhone').textContent = phone;
+            document.getElementById('modalLoading').style.display = 'block';
+            document.getElementById('modalResult').style.display = 'none';
+            document.getElementById('connectionModal').style.display = 'flex';
+            currentPollingPhone = phone;
+
+            try {
+                await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, settings })
+                });
+            } catch (err) { closeModal(); }
+        };
+
+        function toggleSettings() {
+            const btn = document.getElementById('settingsToggleBtn');
+            const panel = document.getElementById('settingsPanel');
+            btn.classList.toggle('open');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open') && document.getElementById('raidSchedulesList').children.length === 0) {
+                addRaidSchedule();
+            }
+        }
+
+        function addRaidSchedule() {
+            const container = document.getElementById('raidSchedulesList');
+            const div = document.createElement('div');
+            div.className = 'raid-schedule-item';
+            div.innerHTML = `
+                <span class="remove-schedule-btn" onclick="this.parentElement.remove()">×</span>
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input type="time" class="raid-time" required>
+                </div>
+                <div class="settings-grid-2">
+                    <div class="form-group">
+                        <label>Sub (min)</label>
+                        <input type="number" class="raid-sub-duration" value="30" min="1" placeholder="30">
+                    </div>
+                    <div class="form-group">
+                        <label>Eng (hr)</label>
+                        <input type="number" class="raid-eng-duration" value="6" min="1" placeholder="6">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function showPairingResult(code) {
+            document.getElementById('modalPairCode').textContent = code;
+            document.getElementById('modalLoading').style.display = 'none';
+            document.getElementById('modalResult').style.display = 'block';
+            document.getElementById('modalSuccess').style.display = 'none';
+            // We keep currentPollingPhone so we can detect when it becomes 'Connected'
+        }
+
+        function showSuccessMessage() {
+            if (document.getElementById('modalSuccess').style.display === 'block') return;
+            
+            document.getElementById('modalLoading').style.display = 'none';
+            document.getElementById('modalResult').style.display = 'none';
+            document.getElementById('modalSuccess').style.display = 'block';
+            
+            // Clear polling phone so we don't trigger this again
+            const tempPhone = currentPollingPhone;
+            currentPollingPhone = null;
+
+            setTimeout(() => {
+                closeModal();
+                fetchState(); // Force immediate refresh
+            }, 3000);
+        }
+
+        function closeModal() {
+            document.getElementById('connectionModal').style.display = 'none';
+            currentPollingPhone = null;
+        }
+
+        function copyPairingCode() {
+            const code = document.getElementById('modalPairCode').textContent;
+            navigator.clipboard.writeText(code);
+            document.getElementById('copyToast').style.display = 'block';
+            setTimeout(() => document.getElementById('copyToast').style.display = 'none', 2000);
+        }
+
+        function copyCodeFromPanel() {
+            const code = document.getElementById('pairCode').textContent;
+            navigator.clipboard.writeText(code);
+            alert('Code copied!');
+        }
+
+        async function deleteAccount(phone) {
+            if (!confirm(`Terminate ${phone}?`)) return;
+            await fetch('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+            fetchState();
+        }
+
+        function updateFileLabel(input) {
+            const labelText = document.getElementById('fileNameText');
+            if (input.files && input.files.length > 0) {
+                if (input.files.length === 1) {
+                    labelText.textContent = input.files[0].name;
+                } else {
+                    labelText.textContent = `${input.files.length} files selected`;
+                }
+                labelText.style.color = 'var(--primary)';
+            } else {
+                labelText.textContent = 'Click to choose session files (.json)';
+                labelText.style.color = 'var(--text-muted)';
+            }
+        }
+
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;margin:0;border-width:2px;border-top-color:#fff;"></div> Uploading...';
+            btn.disabled = true;
+
+            const formData = new FormData(e.target);
+            try {
+                await fetch('/upload-auth', { method: 'POST', body: formData });
+                e.target.reset();
+                updateFileLabel(document.getElementById('authFiles'));
+                fetchState();
+            } catch (err) { alert('Upload failed!'); } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        async function deleteWorker(filename) {
+            if (!confirm(`Delete ${filename}?`)) return;
+            await fetch('/delete-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename }) });
+            fetchState();
+        }
+
+        setInterval(fetchState, 3000);
+        setInterval(fetchAdminLedger, 10000); // Admin refresh slow interval
+        
+        // Initialize dashboard: Load user context, then trigger data states
+        fetchUser().then(() => fetchState());
+    </script>
+</body>
+</html>
