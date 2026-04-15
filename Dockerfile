@@ -1,17 +1,18 @@
-# Use the official Playwright image as it includes all browser dependencies
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
+# Use an ultra-lightweight Node.js base image (Debian slim)
+FROM node:20-bookworm-slim
 
-# Set environment variables to prevent duplicate browser downloads
+# Prevent duplicate chromium downloads in Node/Puppeteer
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Set working directory
 WORKDIR /app
 
-# Install Python and pip
+# Install Python, pip, system chromium for WPPConnect, and venv
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-venv \
+    chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files first for caching
@@ -21,8 +22,16 @@ COPY requirements.txt ./
 # Install Node.js dependencies
 RUN npm ci
 
+# Create a virtual environment for Python (Debian Bookworm strictly enforces PEP 668)
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright and its necessary system dependencies
+RUN playwright install chromium
+RUN playwright install-deps chromium
 
 # Copy the rest of the application
 COPY . .
@@ -32,10 +41,12 @@ ENV NODE_ENV=production
 ENV DATA_DIR=/app/data
 ENV PORT=3000
 
-# Create the data directory (though a Volume should be mounted here)
+# Point WPPConnect (Puppeteer) to the system-installed Chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# Ensure data dir exists
 RUN mkdir -p /app/data
 
-# Expose the dashboard port
 EXPOSE 3000
 
 # Start the bot
