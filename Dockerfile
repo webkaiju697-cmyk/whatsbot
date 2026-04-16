@@ -1,39 +1,33 @@
-# Use the official Playwright image as it includes all browser dependencies
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
+# Use Node.js 20 Alpine for minimal image size
+FROM node:20-alpine
+
+ENV NODE_ENV=production
 
 # Set working directory
 WORKDIR /app
 
-# Install Python and pip (Nixpacks usually handles this, but since we use a custom base image, we do it here)
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy dependency files
 COPY package*.json ./
-COPY requirements.txt ./
 
-# Install Node.js dependencies
-RUN npm ci
+# Install Node.js dependencies with --legacy-peer-deps to handle any conflicts
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
-RUN playwright install chromium
-
-# Copy the rest of the application
+# Copy rest of application
 COPY . .
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV DATA_DIR=/app/data
-ENV PORT=3000
-
-# Create the data directory (though a Volume should be mounted here)
+# Create data directory
 RUN mkdir -p /app/data
 
-# Expose the dashboard port
+# Set environment variables
+ENV DATA_DIR=/app/data
+ENV PORT=3000
+ENV NODE_OPTIONS="--max-old-space-size=512 --expose-gc"
+
 EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
 
 # Start the bot
 CMD ["node", "bot.js"]
