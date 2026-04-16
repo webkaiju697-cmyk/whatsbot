@@ -178,6 +178,15 @@ class BotSession {
             // Race between connection and timeout
             this.client = await Promise.race([createPromise, timeoutPromise]);
 
+            // Listen for browser disconnect
+            if (this.client && this.client.browser) {
+                this.client.browser.on('disconnected', () => {
+                    console.log(`[${this.phone}] Browser disconnected.`);
+                    this.status = 'Browser Closed';
+                    this.updateDbStatus('Browser Closed');
+                });
+            }
+
             this.status = 'Connected';
             this.qr = '';
             this.updateDbStatus('Connected');
@@ -277,6 +286,15 @@ class BotSession {
 
             // Race between connection and timeout
             this.client = await Promise.race([createPromise, timeoutPromise]);
+
+            // Listen for browser disconnect
+            if (this.client && this.client.browser) {
+                this.client.browser.on('disconnected', () => {
+                    console.log(`[${this.phone}] Browser disconnected.`);
+                    this.status = 'Browser Closed';
+                    this.updateDbStatus('Browser Closed');
+                });
+            }
 
             // Once wppconnect.create resolves, the client is logged in and ready.
             if (this.client) {
