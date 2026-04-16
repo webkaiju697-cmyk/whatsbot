@@ -43,6 +43,7 @@ COPY . .
 ENV NODE_ENV=production
 ENV DATA_DIR=/app/data
 ENV PORT=3000
+ENV NODE_OPTIONS="--max-old-space-size=1024 --expose-gc"
 
 RUN mkdir -p /app/data
 EXPOSE 3000

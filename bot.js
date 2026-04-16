@@ -61,6 +61,59 @@ db.serialize(() => {
 const activeSessions = new Map(); // phone -> BotSession instance
 const pendingOperations = new Set(); // phone numbers currently being connected or deleted
 
+// ============ MEMORY OPTIMIZATION ============
+// Monitor and log memory usage
+function logMemoryUsage() {
+    const usage = process.memoryUsage();
+    console.log(`📊 Memory Usage: RSS=${Math.round(usage.rss / 1024 / 1024)}MB, Heap=${Math.round(usage.heapUsed / 1024 / 1024)}MB/${Math.round(usage.heapTotal / 1024 / 1024)}MB`);
+}
+
+// Force garbage collection every 30 seconds if available
+if (global.gc) {
+    setInterval(() => {
+        global.gc();
+        logMemoryUsage();
+    }, 30000);
+} else {
+    console.warn('⚠️  Garbage collection not exposed. Run with --expose-gc flag for optimal memory management');
+}
+
+// Clear old session data every hour
+setInterval(async () => {
+    try {
+        const sessions = Array.from(activeSessions.values());
+        for (const session of sessions) {
+            // Clear old raid state if not active
+            if (!session.raidState.active && session.raidState.participants) {
+                session.raidState.participants.clear();
+                session.raidState.participantMap.clear();
+                session.raidState.linkToSenderMap.clear();
+                session.raidState.links.clear();
+            }
+            
+            // Clear expired timers
+            if (session.activeTimers) {
+                for (const [key, timer] of session.activeTimers.entries()) {
+                    if (timer.expiry && Date.now() > timer.expiry) {
+                        clearTimeout(timer.id);
+                        session.activeTimers.delete(key);
+                    }
+                }
+            }
+        }
+        console.log('🧹 Cleaned up old session data');
+        logMemoryUsage();
+    } catch (err) {
+        console.error('Error during cleanup:', err.message);
+    }
+}, 3600000); // Every hour
+
+process.on('warning', (warning) => {
+    if (warning.name === 'MaxListenersExceededWarning') {
+        console.warn('⚠️  MaxListenersExceeded:', warning.message);
+    }
+});
+
 class BotSession {
     constructor(config) {
         this.phone = config.phone;
@@ -148,7 +201,14 @@ class BotSession {
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
                         '--no-first-run',
-                        '--no-zygote'
+                        '--no-zygote',
+                        // Memory optimizations
+                        '--disable-gpu',
+                        '--disable-component-extensions-with-background-pages',
+                        '--disable-default-apps',
+                        '--disable-sync',
+                        '--disable-background-timer-throttling',
+                        '--mute-audio'
                     ]
                 },
                 onQRCode: (base64) => {
@@ -208,7 +268,13 @@ class BotSession {
                         '--disable-software-rasterizer',
                         '--disable-canvas-aa',
                         '--disable-2d-canvas-clip-aa',
-                        '--disable-gl-drawing-for-tests'
+                        '--disable-gl-drawing-for-tests',
+                        // Additional memory optimizations
+                        '--disable-component-extensions-with-background-pages',
+                        '--disable-default-apps',
+                        '--disable-sync',
+                        '--disable-background-timer-throttling',
+                        '--mute-audio'
                     ]
                 },
                 catchLinkCode: (code) => {
