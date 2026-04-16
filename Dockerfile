@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libatk-bridge2.0-0 \
     libcups2 \
     libdrm2 \
+    libgbm1 \
     libgcc1 \
     libxcomposite1 \
     libxcursor1 \
