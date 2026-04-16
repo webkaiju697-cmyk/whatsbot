@@ -127,7 +127,12 @@ class BotSession {
         console.log(`[${this.phone}] Initializing session for ${this.name}...`);
         
         try {
-            this.client = await wppconnect.create({
+            // Create a timeout promise that rejects after 5 minutes
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Connection timeout: WhatsApp session took too long to initialize (>5 min)')), 5 * 60 * 1000)
+            );
+
+            const createPromise = wppconnect.create({
                 session: this.sessionId,
                 mkdirFolderToken: this.paths.tokens,
                 logQR: false,
@@ -148,16 +153,20 @@ class BotSession {
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
                         '--no-first-run',
-                        '--no-zygote'
+                        '--no-zygote',
+                        '--disable-gpu',
+                        '--single-process'
                     ]
                 },
                 onQRCode: (base64) => {
                     this.qr = base64;
                     this.status = 'Waiting for QR Scan';
+                    console.log(`[${this.phone}] QR code generated. Awaiting scan...`);
                 },
                 statusFind: async (status) => {
                     this.status = status;
                     this.updateDbStatus(status);
+                    console.log(`[${this.phone}] Status: ${status}`);
                     if (status === 'desconnectedMobile' || (status === 'notLogged' && this.botStarted)) {
                         console.log(`[${this.phone}] Logout detected from phone. Terminating session.`);
                         this.updateDbStatus('Logged Out');
@@ -166,12 +175,15 @@ class BotSession {
                 }
             });
 
+            // Race between connection and timeout
+            this.client = await Promise.race([createPromise, timeoutPromise]);
+
             this.status = 'Connected';
             this.qr = '';
             this.updateDbStatus('Connected');
             this.startBot();
         } catch (error) {
-            console.error(`[${this.phone}] Failed to init:`, error);
+            console.error(`[${this.phone}] Failed to init:`, error.message);
             this.status = 'Error';
         }
     }
@@ -181,7 +193,12 @@ class BotSession {
         this.pairingCode = '';
         
         try {
-            this.client = await wppconnect.create({
+            // Create a timeout promise that rejects after 5 minutes
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Connection timeout: Pairing took too long (>5 min)')), 5 * 60 * 1000)
+            );
+
+            const createPromise = wppconnect.create({
                 session: this.sessionId,
                 mkdirFolderToken: this.paths.tokens,
                 phoneNumber: this.phone,
@@ -205,10 +222,7 @@ class BotSession {
                         '--no-first-run',
                         '--no-zygote',
                         '--disable-gpu',
-                        '--disable-software-rasterizer',
-                        '--disable-canvas-aa',
-                        '--disable-2d-canvas-clip-aa',
-                        '--disable-gl-drawing-for-tests'
+                        '--single-process'
                     ]
                 },
                 catchLinkCode: (code) => {
@@ -220,6 +234,7 @@ class BotSession {
                 statusFind: async (status) => {
                     this.status = status;
                     this.updateDbStatus(status);
+                    console.log(`[${this.phone}] Status: ${status}`);
                     
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
@@ -260,6 +275,9 @@ class BotSession {
                 }
             });
 
+            // Race between connection and timeout
+            this.client = await Promise.race([createPromise, timeoutPromise]);
+
             // Once wppconnect.create resolves, the client is logged in and ready.
             if (this.client) {
                 this.status = 'Connected';
@@ -270,7 +288,7 @@ class BotSession {
             }
 
         } catch (error) {
-            console.error(`[${this.phone}] Failed to init with pairing:`, error);
+            console.error(`[${this.phone}] Failed to init with pairing:`, error.message);
             this.status = 'Error';
         }
     }

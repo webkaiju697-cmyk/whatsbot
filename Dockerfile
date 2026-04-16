@@ -51,7 +51,7 @@ RUN mkdir -p /app/data
 # Set environment variables
 ENV DATA_DIR=/app/data
 ENV PORT=3000
-ENV NODE_OPTIONS="--max-old-space-size=512 --expose-gc"
+ENV NODE_OPTIONS="--max-old-space-size=2048 --expose-gc"
 
 EXPOSE 3000
 
