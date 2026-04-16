@@ -1,16 +1,20 @@
 # Use the official Playwright image as it includes all browser dependencies
 FROM mcr.microsoft.com/playwright:v1.52.0-noble
 
+# Set environment variables to prevent duplicate browser downloads
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 # Set working directory
 WORKDIR /app
 
-# Install Python and pip (Nixpacks usually handles this, but since we use a custom base image, we do it here)
+# Install Python and pip
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
+# Copy dependency files first for caching
 COPY package*.json ./
 COPY requirements.txt ./
 
@@ -19,12 +23,11 @@ RUN npm ci
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
-RUN playwright install chromium
 
 # Copy the rest of the application
 COPY . .
 
-# Set environment variables
+# Set runtime environment variables
 ENV NODE_ENV=production
 ENV DATA_DIR=/app/data
 ENV PORT=3000

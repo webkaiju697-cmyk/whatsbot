@@ -1,0 +1,10 @@
+node_modules
+.git
+__pycache__
+tokens
+user_data
+MinGit
+MinGit.zip
+push.ps1
+README.md
+*.log
