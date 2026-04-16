@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcups2 \
     libdrm2 \
     libgbm1 \
+    libegl1 \
+    libglvnd0 \
     libgcc1 \
     libxcomposite1 \
     libxcursor1 \
