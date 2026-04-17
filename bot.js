@@ -75,6 +75,8 @@ class BotSession {
         this.status = 'Idle';
         this.qr = '';
         this.pairingCode = '';
+        this.botStarted = false;
+        this.pendingBotStart = false;
         
         // Raid State (Per Session)
         this.raidState = {
@@ -132,13 +134,24 @@ class BotSession {
                 setTimeout(() => reject(new Error('Connection timeout: WhatsApp session took too long to initialize (>5 min)')), 5 * 60 * 1000)
             );
 
+            const startBotWhenReady = async () => {
+                if (this.botStarted) return;
+                if (!this.client) {
+                    this.pendingBotStart = true;
+                    return;
+                }
+                this.startBot();
+            };
+
             const createPromise = wppconnect.create({
                 session: this.sessionId,
                 mkdirFolderToken: this.paths.tokens,
                 logQR: false,
                 autoClose: 0,
-                disableWelcome: true, 
+                disableWelcome: true,
                 createBrowserDevice: true,
+                waitForLogin: false,
+                headless: true,
                 autoDownload: {
                     image: false,
                     video: false,
@@ -148,7 +161,7 @@ class BotSession {
                 puppeteerOptions: {
                     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                     args: [
-                        '--no-sandbox', 
+                        '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
@@ -167,6 +180,9 @@ class BotSession {
                     this.status = status;
                     this.updateDbStatus(status);
                     console.log(`[${this.phone}] Status: ${status}`);
+                    if ((status === 'isLogged' || status === 'Connected') && !this.botStarted) {
+                        await startBotWhenReady();
+                    }
                     if (status === 'desconnectedMobile' || (status === 'notLogged' && this.botStarted)) {
                         console.log(`[${this.phone}] Logout detected from phone. Terminating session.`);
                         this.updateDbStatus('Logged Out');
@@ -177,6 +193,12 @@ class BotSession {
 
             // Race between connection and timeout
             this.client = await Promise.race([createPromise, timeoutPromise]);
+
+            // If login status arrived before client assignment, start the bot now
+            if (this.pendingBotStart && !this.botStarted) {
+                this.pendingBotStart = false;
+                this.startBot();
+            }
 
             // Listen for browser disconnect
             if (this.client && this.client.browser) {
@@ -190,7 +212,7 @@ class BotSession {
             this.status = 'Connected';
             this.qr = '';
             this.updateDbStatus('Connected');
-            this.startBot();
+            if (!this.botStarted) this.startBot();
         } catch (error) {
             console.error(`[${this.phone}] Failed to init:`, error.message);
             this.status = 'Error';
@@ -207,6 +229,15 @@ class BotSession {
                 setTimeout(() => reject(new Error('Connection timeout: Pairing took too long (>5 min)')), 5 * 60 * 1000)
             );
 
+            const startBotWhenReady = async () => {
+                if (this.botStarted) return;
+                if (!this.client) {
+                    this.pendingBotStart = true;
+                    return;
+                }
+                this.startBot();
+            };
+
             const createPromise = wppconnect.create({
                 session: this.sessionId,
                 mkdirFolderToken: this.paths.tokens,
@@ -215,6 +246,8 @@ class BotSession {
                 autoClose: 0,
                 disableWelcome: true,
                 createBrowserDevice: true,
+                waitForLogin: false,
+                headless: true,
                 autoDownload: {
                     image: false,
                     video: false,
@@ -224,7 +257,7 @@ class BotSession {
                 puppeteerOptions: {
                     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                     args: [
-                        '--no-sandbox', 
+                        '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
@@ -245,6 +278,10 @@ class BotSession {
                     this.updateDbStatus(status);
                     console.log(`[${this.phone}] Status: ${status}`);
                     
+                    if ((status === 'isLogged' || status === 'Connected') && !this.botStarted) {
+                        await startBotWhenReady();
+                    }
+
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
                         this.pairingCode = '';
                         this.qr = '';
@@ -287,6 +324,11 @@ class BotSession {
             // Race between connection and timeout
             this.client = await Promise.race([createPromise, timeoutPromise]);
 
+            if (this.pendingBotStart && !this.botStarted) {
+                this.pendingBotStart = false;
+                this.startBot();
+            }
+
             // Listen for browser disconnect
             if (this.client && this.client.browser) {
                 this.client.browser.on('disconnected', () => {
@@ -302,7 +344,7 @@ class BotSession {
                 this.pairingCode = '';
                 this.qr = '';
                 this.updateDbStatus('Connected');
-                this.startBot();
+                if (!this.botStarted) this.startBot();
             }
 
         } catch (error) {
