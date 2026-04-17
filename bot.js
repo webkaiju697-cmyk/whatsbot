@@ -1018,14 +1018,48 @@ To remove a raid, use: .delete ID`
     }
 
     runVetting(links, participants, callback) {
-        const pythonProcess = spawn('python', ['vetting_bridge.py']);
+        const scriptPath = path.join(__dirname, 'vetting_bridge.py');
+        const pythonExecutable = process.env.PYTHON_EXECUTABLE || 'python3';
         let output = '';
-        pythonProcess.stdout.on('data', (data) => output += data.toString());
-        pythonProcess.on('close', () => {
-            try { callback(JSON.parse(output)); } catch (e) { callback({ error: 'Failed to parse' }); }
-        });
-        pythonProcess.stdin.write(JSON.stringify({ target_links: links, participant_handles: participants }));
-        pythonProcess.stdin.end();
+        let callbackCalled = false;
+
+        const startPython = (command) => {
+            const pythonProcess = spawn(command, [scriptPath]);
+
+            pythonProcess.stdout.on('data', (data) => output += data.toString());
+            pythonProcess.stderr.on('data', (data) => console.error(`[vetting_bridge] ${data.toString().trim()}`));
+
+            pythonProcess.on('error', (err) => {
+                if (err.code === 'ENOENT' && command === 'python3') {
+                    console.warn('[vetting_bridge] python3 not found, falling back to python');
+                    return startPython('python');
+                }
+                if (!callbackCalled) {
+                    callbackCalled = true;
+                    callback({ error: `Python execution error: ${err.message}` });
+                }
+            });
+
+            pythonProcess.on('close', (code) => {
+                if (callbackCalled) return;
+                callbackCalled = true;
+
+                if (code !== 0) {
+                    return callback({ error: `Python process exited with code ${code}` });
+                }
+
+                try {
+                    callback(JSON.parse(output));
+                } catch (e) {
+                    callback({ error: 'Failed to parse vetting response' });
+                }
+            });
+
+            pythonProcess.stdin.write(JSON.stringify({ target_links: links, participant_handles: participants }));
+            pythonProcess.stdin.end();
+        };
+
+        startPython(pythonExecutable);
     }
 }
 
