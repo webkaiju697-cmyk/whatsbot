@@ -180,8 +180,12 @@ class BotSession {
                     this.status = status;
                     this.updateDbStatus(status);
                     console.log(`[${this.phone}] Status: ${status}`);
-                    if ((status === 'isLogged' || status === 'Connected') && !this.botStarted) {
+                    if ((status === 'isLogged' || status === 'inChat') && !this.botStarted) {
                         await startBotWhenReady();
+                    }
+                    if (status === 'inChat') {
+                        this.status = 'Connected';
+                        this.updateDbStatus('Connected');
                     }
                     if (status === 'desconnectedMobile' || (status === 'notLogged' && this.botStarted)) {
                         console.log(`[${this.phone}] Logout detected from phone. Terminating session.`);
@@ -278,11 +282,16 @@ class BotSession {
                     this.updateDbStatus(status);
                     console.log(`[${this.phone}] Status: ${status}`);
                     
-                    if ((status === 'isLogged' || status === 'Connected') && !this.botStarted) {
+                    if ((status === 'isLogged' || status === 'inChat') && !this.botStarted) {
                         await startBotWhenReady();
                     }
 
-                    if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'Connected') {
+                    if (status === 'inChat') {
+                        this.status = 'Connected';
+                        this.updateDbStatus('Connected');
+                    }
+
+                    if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'inChat') {
                         this.pairingCode = '';
                         this.qr = '';
                     }
