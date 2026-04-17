@@ -159,8 +159,8 @@ class BotSession {
                     document: false,
                 },
                 puppeteerOptions: {
-                    executablePath: '/data/data/com.termux/files/usr/bin/chromium',
-                    headless: false,
+                    executablePath: undefined,
+                    headless: true,
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
@@ -274,8 +274,8 @@ class BotSession {
                     document: false,
                 },
                 puppeteerOptions: {
-                    executablePath: '/data/data/com.termux/files/usr/bin/chromium',
-                    headless: false,
+                    executablePath: undefined,
+                    headless: true,
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
