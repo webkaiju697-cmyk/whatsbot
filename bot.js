@@ -159,16 +159,15 @@ class BotSession {
                     document: false,
                 },
                 puppeteerOptions: {
-                    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+                    executablePath: '/data/data/com.termux/files/usr/bin/chromium',
+                    headless: false,
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
                         '--no-first-run',
-                        '--no-zygote',
-                        '--disable-gpu',
-                        '--single-process'
+                        '--no-zygote'
                     ]
                 },
                 onQRCode: (base64) => {
@@ -186,6 +185,22 @@ class BotSession {
                     if (status === 'inChat') {
                         this.status = 'Connected';
                         this.updateDbStatus('Connected');
+                    }
+                    if (status === 'browserClose') {
+                        console.log(`[${this.phone}] Browser closed. Checking if connected...`);
+                        // Don't terminate immediately, check if we can reconnect
+                        if (this.botStarted) {
+                            this.status = 'Browser Closed';
+                            this.updateDbStatus('Browser Closed');
+                            // Perhaps add a timeout to stop after a delay
+                            setTimeout(() => {
+                                if (this.status === 'Browser Closed') {
+                                    console.log(`[${this.phone}] Browser still closed after delay. Terminating.`);
+                                    this.stop();
+                                }
+                            }, 10000); // 10 seconds delay
+                        }
+                        return;
                     }
                     if (status === 'desconnectedMobile' || (status === 'notLogged' && this.botStarted)) {
                         console.log(`[${this.phone}] Logout detected from phone. Terminating session.`);
@@ -259,16 +274,15 @@ class BotSession {
                     document: false,
                 },
                 puppeteerOptions: {
-                    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+                    executablePath: '/data/data/com.termux/files/usr/bin/chromium',
+                    headless: false,
                     args: [
                         '--no-sandbox',
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-extensions',
                         '--no-first-run',
-                        '--no-zygote',
-                        '--disable-gpu',
-                        '--single-process'
+                        '--no-zygote'
                     ]
                 },
                 catchLinkCode: (code) => {
@@ -289,6 +303,23 @@ class BotSession {
                     if (status === 'inChat') {
                         this.status = 'Connected';
                         this.updateDbStatus('Connected');
+                    }
+
+                    if (status === 'browserClose') {
+                        console.log(`[${this.phone}] Browser closed. Checking if connected...`);
+                        // Don't terminate immediately, check if we can reconnect
+                        if (this.botStarted) {
+                            this.status = 'Browser Closed';
+                            this.updateDbStatus('Browser Closed');
+                            // Perhaps add a timeout to stop after a delay
+                            setTimeout(() => {
+                                if (this.status === 'Browser Closed') {
+                                    console.log(`[${this.phone}] Browser still closed after delay. Terminating.`);
+                                    this.stop();
+                                }
+                            }, 10000); // 10 seconds delay
+                        }
+                        return;
                     }
 
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'inChat') {
