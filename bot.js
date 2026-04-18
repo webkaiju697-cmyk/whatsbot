@@ -125,6 +125,22 @@ class BotSession {
         }
     }
 
+    parseTimeToMs(timeString) {
+        if (!timeString || typeof timeString !== 'string') return null;
+        
+        const match = timeString.match(/^(\d+)([smh])$/i);
+        if (!match) return null;
+
+        const value = parseInt(match[1], 10);
+        const unit = match[2].toLowerCase();
+
+        if (unit === 's') return value * 1000;
+        if (unit === 'm') return value * 60 * 1000;
+        if (unit === 'h') return value * 60 * 60 * 1000;
+        
+        return null;
+    }
+
     async init() {
         console.log(`[${this.phone}] Initializing session for ${this.name}...`);
         
@@ -798,7 +814,21 @@ ${defaulters.map(d => `@${d.split('@')[0]} - Strike 1 (24h ban)`).join('\n')}
                         if (this.raidState.active) {
                             await this.client.sendText(message.from, '⚠ A raid is already active!');
                         } else {
-                            this.startScheduledRaid(message.from, message.author || message.from, 30 * 60 * 1000, 6 * 60 * 60 * 1000);
+                            // Parse submission and engagement times from message
+                            const parts = message.body.trim().split(/\s+/);
+                            let subMs = 30 * 60 * 1000; // default 30m
+                            let engMs = 6 * 60 * 60 * 1000; // default 6h
+
+                            if (parts.length >= 2) {
+                                const subTime = parts[1];
+                                subMs = this.parseTimeToMs(subTime) || subMs;
+                            }
+                            if (parts.length >= 3) {
+                                const engTime = parts[2];
+                                engMs = this.parseTimeToMs(engTime) || engMs;
+                            }
+
+                            this.startScheduledRaid(message.from, message.author || message.from, subMs, engMs);
                         }
                     }
                     if (message.body.startsWith('.endraid')) {
