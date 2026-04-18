@@ -605,7 +605,7 @@ class BotSession {
                 this.dailySchedules = JSON.parse(fs.readFileSync(this.paths.schedules, 'utf8'));
                 this.dailySchedules.forEach(s => {
                     if (!s.id) s.id = Date.now() + Math.floor(Math.random() * 1000);
-                    this.scheduleDailyRaid(s.groupId, s.hours, s.minutes, s.hostId, s.id);
+                    this.scheduleDailyRaid(s.groupId, s.hours, s.minutes, s.hostId, s.id, s.subDelta, s.engDelta);
                 });
             } catch (e) {}
         }
