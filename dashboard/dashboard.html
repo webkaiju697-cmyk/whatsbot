@@ -537,7 +537,7 @@
                             // This prevents showing success before pairing code is displayed
                             if (acc.pairingCode) {
                                 showPairingResult(acc.pairingCode);
-                            } else if (['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
+                            } else if (acc.isPersisted && ['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
                                 showSuccessMessage();
                             } else if (acc.currentStatus.includes('Rate Limited')) {
                                 if (loadingTitle) loadingTitle.textContent = "Rate Limit Hit";
