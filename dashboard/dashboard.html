@@ -541,9 +541,8 @@
                             } else if (acc.qr) {
                                 // Fallback: Show QR code if pairing code unavailable
                                 showQRCode(acc.qr);
-                            } else if (acc.isPersisted && 
-                                    pairingCodeShown[acc.phone] && 
-                                    ['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
+                            } else if (['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
+                                // Show success when WhatsApp has connected (regardless of pairing method)
                                 showSuccessMessage();
                             } else if (acc.currentStatus.includes('Rate Limited')) {
                                 if (loadingTitle) loadingTitle.textContent = "Rate Limit Hit";
