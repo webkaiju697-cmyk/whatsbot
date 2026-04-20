@@ -189,7 +189,7 @@ class BotSession {
                 onQRCode: (base64) => {
                     this.qr = base64;
                     this.status = 'Waiting for QR Scan';
-                    console.log(`[${this.phone}] QR code generated. Awaiting scan...`);
+                    console.log(`[${this.phone}] QR code generated. Awaiting scan... (Token restoration may have failed - check if tokens exist in ${this.paths.tokens})`);
                 },
                 statusFind: async (status) => {
                     this.status = status;
@@ -201,6 +201,7 @@ class BotSession {
                     if (status === 'inChat') {
                         this.status = 'Connected';
                         this.updateDbStatus('Connected');
+                        console.log(`[${this.phone}] Session successfully restored from stored tokens.`);
                     }
                     if (status === 'browserClose') {
                         console.log(`[${this.phone}] Browser closed. Checking if connected...`);
@@ -1431,10 +1432,30 @@ async function initAllSessions() {
                     name: row.name,
                     sessionId: row.session_id,
                     expiryAt: row.expiry_at,
-                    settings
+                    settings,
+                    userId: row.user_id,
+                    isPersisted: true
                 });
                 activeSessions.set(row.phone, session);
-                session.initWithPairing().catch(e => console.error(`[${row.phone}] Session init failed:`, e));
+                
+                // Check if tokens exist for this session
+                const tokenDir = path.join(DATA_DIR, 'tokens', row.session_id);
+                const tokensExist = fs.existsSync(tokenDir) && fs.readdirSync(tokenDir).length > 0;
+                
+                if (tokensExist) {
+                    console.log(`[${row.phone}] Found stored tokens. Restoring session...`);
+                    // Try to restore from existing tokens without pairing
+                    session.init().catch(e => {
+                        console.error(`[${row.phone}] Token restoration failed, falling back to pairing:`, e.message);
+                        // If token restoration fails, fall back to pairing
+                        session.initWithPairing().catch(e2 => console.error(`[${row.phone}] Pairing fallback also failed:`, e2));
+                    });
+                } else {
+                    console.log(`[${row.phone}] ⚠️ No stored tokens found at ${tokenDir}. Pairing required on next connection attempt.`);
+                    // Don't auto-initiate without tokens; wait for user to manually connect
+                    // This prevents new QR codes from being generated unnecessarily
+                    session.updateDbStatus(row.status);
+                }
             } catch (e) {
                 console.error(`[${row.phone}] Failed to create BotSession:`, e);
             }
@@ -1442,8 +1463,31 @@ async function initAllSessions() {
     });
 }
 
+function diagnosticTokenCheck() {
+    console.log('\n📋 --- Token Persistence Diagnostic ---');
+    console.log(`Data Directory: ${DATA_DIR}`);
+    const tokenDir = path.join(DATA_DIR, 'tokens');
+    if (!fs.existsSync(tokenDir)) {
+        console.log('⚠️  Token directory does NOT exist. Will be created on first connection.');
+    } else {
+        const sessions = fs.readdirSync(tokenDir);
+        if (sessions.length === 0) {
+            console.log('✓ Token directory exists but is empty. (No connected sessions yet)');
+        } else {
+            console.log(`✓ Found ${sessions.length} session token(s):`);
+            sessions.forEach(sessionId => {
+                const sessionPath = path.join(tokenDir, sessionId);
+                const files = fs.readdirSync(sessionPath);
+                console.log(`  - ${sessionId}: ${files.length} file(s)`);
+            });
+        }
+    }
+    console.log('📋 --- End Diagnostic ---\n');
+}
+
 const server = app.listen(port, () => {
     console.log(`🚀 Commercial Bot Dashboard running at http://localhost:${port}/`);
+    diagnosticTokenCheck();
     initAllSessions();
 });
 
