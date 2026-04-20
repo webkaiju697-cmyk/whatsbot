@@ -533,10 +533,12 @@
                             
                             if (loadingStatus) loadingStatus.textContent = `Status: ${acc.currentStatus}`;
 
-                            if (['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
-                                showSuccessMessage();
-                            } else if (acc.pairingCode) {
+                            // CHECK PAIRING CODE FIRST before checking for Connected status
+                            // This prevents showing success before pairing code is displayed
+                            if (acc.pairingCode) {
                                 showPairingResult(acc.pairingCode);
+                            } else if (['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
+                                showSuccessMessage();
                             } else if (acc.currentStatus.includes('Rate Limited')) {
                                 if (loadingTitle) loadingTitle.textContent = "Rate Limit Hit";
                                 document.getElementById('modalLoadingText').innerHTML = `<span style="color:var(--danger)">WhatsApp has limited pairing requests.</span><br>Please wait 5-10 minutes and try again.`;

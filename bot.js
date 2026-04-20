@@ -1280,6 +1280,11 @@ app.post('/api/connect', authenticateToken, async (req, res) => {
             activeSessions.delete(phone);
         }
 
+        // Reset DB status to "Initializing" to prevent showing old "Connected" status
+        db.run('UPDATE whatsapp_accounts SET status = ? WHERE phone = ?', ['Initializing', phone], (err) => {
+            if (err) console.error(`[${phone}] Failed to reset status:`, err);
+        });
+
         // Initialize in memory ONLY
         session = new BotSession({ 
             phone, 
