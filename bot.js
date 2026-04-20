@@ -308,6 +308,13 @@ class BotSession {
                     this.updateDbStatus('Waiting for Pairing Code');
                     console.log(`[${this.phone}] Pairing Code generated (via catchLinkCode): ${code}`);
                 },
+                onQRCode: (base64) => {
+                    // Fallback when pairing code generation fails - capture QR code instead
+                    this.qr = base64;
+                    this.status = 'Waiting for QR Scan';
+                    this.updateDbStatus('Waiting for QR Scan');
+                    console.log(`[${this.phone}] QR code generated (fallback). Awaiting scan...`);
+                },
                 statusFind: async (status) => {
                     this.status = status;
                     this.updateDbStatus(status);

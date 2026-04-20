@@ -538,6 +538,9 @@
                             // This prevents showing success before pairing code is displayed
                             if (acc.pairingCode) {
                                 showPairingResult(acc.pairingCode);
+                            } else if (acc.qr) {
+                                // Fallback: Show QR code if pairing code unavailable
+                                showQRCode(acc.qr);
                             } else if (acc.isPersisted && 
                                     pairingCodeShown[acc.phone] && 
                                     ['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
