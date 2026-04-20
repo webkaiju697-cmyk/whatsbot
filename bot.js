@@ -1280,9 +1280,13 @@ app.post('/api/connect', authenticateToken, async (req, res) => {
             activeSessions.delete(phone);
         }
 
-        // Reset DB status to "Initializing" to prevent showing old "Connected" status
-        db.run('UPDATE whatsapp_accounts SET status = ? WHERE phone = ?', ['Initializing', phone], (err) => {
-            if (err) console.error(`[${phone}] Failed to reset status:`, err);
+        // Reset DB status to "Connecting" before starting new connection attempt
+        // This ensures the frontend doesn't show stale "Connected" status from previous failed attempt
+        await new Promise((resolve) => {
+            db.run('UPDATE whatsapp_accounts SET status = ? WHERE phone = ?', ['Connecting', phone], (err) => {
+                if (err) console.error(`[${phone}] Failed to reset status:`, err);
+                resolve();
+            });
         });
 
         // Initialize in memory ONLY
