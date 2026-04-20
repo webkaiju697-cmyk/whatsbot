@@ -1225,13 +1225,14 @@ app.get('/api/accounts', authenticateToken, (req, res) => {
         const results = rows.map(row => {
             let settings = {};
             try { settings = JSON.parse(row.settings || '{}'); } catch (e) {}
+            const hasActiveSession = activeSessions.has(row.phone);
             return {
                 ...row,
                 settings,
                 currentStatus: activeSessions.get(row.phone)?.status || 'Offline',
                 pairingCode: activeSessions.get(row.phone)?.pairingCode || '',
                 qr: activeSessions.get(row.phone)?.qr || '',
-                isPersisted: true
+                isPersisted: hasActiveSession  // Only true if account has active session
             };
         });
 
