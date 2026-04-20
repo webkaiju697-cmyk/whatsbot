@@ -465,6 +465,7 @@
 
     <script>
         let currentPollingPhone = null;
+        let pairingCodeShown = {};  // Track which phones have shown pairing code
         let currentUser = null;
 
         async function fetchUser() {
@@ -537,7 +538,9 @@
                             // This prevents showing success before pairing code is displayed
                             if (acc.pairingCode) {
                                 showPairingResult(acc.pairingCode);
-                            } else if (acc.isPersisted && ['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
+                            } else if (acc.isPersisted && 
+                                    pairingCodeShown[acc.phone] && 
+                                    ['Connected', 'isLogged', 'qrReadSuccess'].includes(acc.currentStatus)) {
                                 showSuccessMessage();
                             } else if (acc.currentStatus.includes('Rate Limited')) {
                                 if (loadingTitle) loadingTitle.textContent = "Rate Limit Hit";
@@ -670,6 +673,7 @@
             document.getElementById('modalResult').style.display = 'block';
             document.getElementById('modalSuccess').style.display = 'none';
             // We keep currentPollingPhone so we can detect when it becomes 'Connected'
+            pairingCodeShown[currentPollingPhone] = true;  // Mark that we showed pairing code
         }
 
         function showSuccessMessage() {
@@ -690,8 +694,9 @@
         }
 
         function closeModal() {
+            const phoneToClean = currentPollingPhone;
+            if (phoneToClean) delete pairingCodeShown[phoneToClean];
             document.getElementById('connectionModal').style.display = 'none';
-            currentPollingPhone = null;
         }
 
         function copyPairingCode() {

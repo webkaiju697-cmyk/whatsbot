@@ -340,8 +340,13 @@ class BotSession {
                     }
 
                     if (status === 'isLogged' || status === 'qrReadSuccess' || status === 'inChat') {
-                        this.pairingCode = '';
-                        this.qr = '';
+                        // Keep pairing code visible for a moment to prevent success modal from showing too early
+                        // The pairingCode is still needed by the API for one more poll cycle
+                        // Clear it with a small delay to avoid race conditions
+                        setTimeout(() => {
+                            this.pairingCode = '';
+                            this.qr = '';
+                        }, 1000);  // Wait 1 second before clearing
                     }
 
                     if (status === 'desconnectedMobile' || (status === 'notLogged' && this.botStarted)) {
