@@ -1244,7 +1244,7 @@ app.get('/api/accounts', authenticateToken, (req, res) => {
                 currentStatus: activeSessions.get(row.phone)?.status || 'Offline',
                 pairingCode: activeSessions.get(row.phone)?.pairingCode || '',
                 qr: activeSessions.get(row.phone)?.qr || '',
-                isPersisted: hasActiveSession  // Only true if account has active session
+                isPersisted: true  // DB row exists = account is persisted
             };
         });
 
